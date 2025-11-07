@@ -8,17 +8,16 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  * @author PharmaTrace Team (CSE540)
  * @notice This contract manages Role-Based Access Control (RBAC) for the PharmaTrace system.
  * It defines the roles for Producer, Supplier, Retailer, and Regulator.
- *
- * This contract is intended to be inherited by the main Provenance.sol contract.
+ * It is intended to be inherited by the main Provenance.sol contract.
  */
 contract PharmaTraceAccessControl is AccessControl {
 
     // --- Roles ---
     // We define bytes32 constants for our stakeholder roles.
-    bytes32 public constant PRODUCER_ROLE = keccak26("PRODUCER_ROLE");
-    bytes32 public constant SUPPLIER_ROLE = keccak26("SUPPLIER_ROLE");
-    bytes32 public constant RETAILER_ROLE = keccak26("RETAILER_ROLE");
-    bytes32 public constant REGULATOR_ROLE = keccak26("REGULATOR_ROLE");
+    bytes32 public constant PRODUCER_ROLE = keccak256("PRODUCER_ROLE");
+    bytes32 public constant SUPPLIER_ROLE = keccak256("SUPPLIER_ROLE");
+    bytes32 public constant RETAILER_ROLE = keccak256("RETAILER_ROLE");
+    bytes32 public constant REGULATOR_ROLE = keccak256("REGULATOR_ROLE");
     // The DEFAULT_ADMIN_ROLE (from AccessControl) will be the contract deployer
     // and will be responsible for granting these roles.
 
