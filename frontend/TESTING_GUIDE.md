@@ -145,6 +145,25 @@ await window.ethereum.request({
   - Click **Revoke Role** and confirm the transaction.
 5. The UI shows success/error banners plus the on-chain role identifiers so you can verify permissions at a glance.
 
+### Scenario 5: Explore Products as Admin
+
+1. Connect with the admin wallet (DEFAULT_ADMIN_ROLE) so the dashboard switches to admin mode.
+2. Open the **🗂️ Product Explorer** section.
+3. Use **Refresh List** if needed—this scans on-chain `ProductRegistered` events and populates every batch.
+4. Click any product card on the left to load its metadata and color-coded history timeline.
+5. The right panel shows owner, status, IPFS hash, and the complete audit log, so you no longer need to paste IDs into the Product Verification portal for quick reviews.
+
+### Scenario 6: Transfer Products from Each Role Dashboard
+
+Every stakeholder dashboard now shows a live inventory list driven by on-chain events plus a transfer form tailored to that role:
+
+- **Producer** – Select any batch you still own and enter a supplier address. The "Send to Supplier" form sets the status (Shipped or In Transit) automatically.
+- **Supplier** – Your "Products In Custody" list updates whenever producers hand off batches. Choose one, type the retailer wallet, and dispatch it with either In Transit or Received status.
+- **Retailer** – View everything currently in stock, then send it to a consumer using the "Sell or Transfer" form (set status to Sold or keep it In Stock for warehouse moves).
+- **Consumer** – See all purchases in "My Products". You can gift them to another consumer (status Sold) or flag them to a regulator (status Flagged) straight from the dApp.
+
+Each transfer writes a `transferProduct` transaction, so MetaMask will prompt you to confirm. Use the **Refresh** button beside each inventory heading if you want to resync manually.
+
 ---
 
 ## Common Issues
