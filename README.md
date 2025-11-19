@@ -27,7 +27,7 @@ PharmaTrace uses a hybrid on-chain/off-chain architecture for scalability and co
 
 ### Layer 1 - On-Chain (Ethereum / Solidity)
 - **Contracts:**  
-  - `AccessControl.sol`: Role-Based Access Control (RBAC) managing roles - Producer, Supplier, Retailer, Regulator.  
+  - `AccessControl.sol`: Role-Based Access Control (RBAC) managing roles - Producer, Supplier, Retailer, Consumer, Regulator.  
   - `Provenance.sol`: Core lifecycle contract for registering, transferring, and updating product status.
 - **Key Functions:**  
   - `registerProduct()` - Register new pharmaceutical products

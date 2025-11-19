@@ -97,6 +97,17 @@ contract Provenance is PharmaTraceAccessControl {
         address indexed actor
     );
 
+    // --- Custom Errors ---
+
+    error ProductAlreadyExists(bytes32 productId);
+    error ProductDoesNotExist(bytes32 productId);
+    error NotProductOwner(address caller, address owner);
+    error InvalidProductId();
+    error EmptyProductName();
+    error EmptyMetadataHash();
+    error InvalidNewOwner();
+    error InvalidStatusTransition(ProductStatus current, ProductStatus newStatus);
+
     // --- Constructor ---
 
     /**
@@ -120,15 +131,39 @@ contract Provenance is PharmaTraceAccessControl {
         string calldata _name,
         string calldata _metadataHash
     ) public onlyRole(PRODUCER_ROLE) {
-        // --- FUNCTIONALITY TO BE IMPLEMENTED ---
-        // 1. Check if productId already exists (require(products[...].lastUpdateTime == 0))
-        // 2. Create a new Product struct
-        // 3. Set msg.sender as currentOwner
-        // 4. Set status to ProductStatus.Created
-        // 5. Store the struct in the `products` mapping
-        // 6. Add a "Created" event to `productHistory`
-        // 7. Emit a ProductRegistered event
-        revert("Provenance: Function not yet implemented.");
+        // Validate input parameters
+        if (_productId == bytes32(0)) revert InvalidProductId();
+        if (bytes(_name).length == 0) revert EmptyProductName();
+        if (bytes(_metadataHash).length == 0) revert EmptyMetadataHash();
+        
+        // Check if product already exists
+        if (products[_productId].lastUpdateTime != 0) {
+            revert ProductAlreadyExists(_productId);
+        }
+
+        // Create new product
+        Product memory newProduct = Product({
+            productId: _productId,
+            name: _name,
+            currentOwner: msg.sender,
+            status: ProductStatus.Created,
+            metadataHash: _metadataHash,
+            lastUpdateTime: block.timestamp
+        });
+
+        // Store product in mapping
+        products[_productId] = newProduct;
+
+        // Add initial history event
+        productHistory[_productId].push(HistoryEvent({
+            actor: msg.sender,
+            newStatus: ProductStatus.Created,
+            timestamp: block.timestamp
+        }));
+
+        // Emit event
+        emit ProductRegistered(_productId, msg.sender, _name);
+        emit StatusUpdated(_productId, ProductStatus.Created, msg.sender);
     }
 
     /**
@@ -143,17 +178,40 @@ contract Provenance is PharmaTraceAccessControl {
         address _newOwner,
         ProductStatus _newStatus
     ) public {
-        // --- FUNCTIONALITY TO BE IMPLEMENTED ---
-        // 1. Get the product from the `products` mapping
-        // 2. Check if it exists (require(product.lastUpdateTime != 0))
-        // 3. Check if msg.sender is the currentOwner (require(product.currentOwner == msg.sender))
-        // 4. Update product.currentOwner to _newOwner
-        // 5. Update product.status to _newStatus
-        // 6. Update product.lastUpdateTime
-        // 7. Add a HistoryEvent to `productHistory`
-        // 8. Emit an OwnershipTransferred event
-        // 9. Emit a StatusUpdated event
-        revert("Provenance: Function not yet implemented.");
+        // Validate new owner address
+        if (_newOwner == address(0)) revert InvalidNewOwner();
+        
+        // Get the product
+        Product storage product = products[_productId];
+        
+        // Check if product exists
+        if (product.lastUpdateTime == 0) {
+            revert ProductDoesNotExist(_productId);
+        }
+        
+        // Check if msg.sender is the current owner
+        if (product.currentOwner != msg.sender) {
+            revert NotProductOwner(msg.sender, product.currentOwner);
+        }
+
+        // Store old owner for event
+        address oldOwner = product.currentOwner;
+        
+        // Update product ownership and status
+        product.currentOwner = _newOwner;
+        product.status = _newStatus;
+        product.lastUpdateTime = block.timestamp;
+
+        // Add history event
+        productHistory[_productId].push(HistoryEvent({
+            actor: msg.sender,
+            newStatus: _newStatus,
+            timestamp: block.timestamp
+        }));
+
+        // Emit events
+        emit OwnershipTransferred(_productId, oldOwner, _newOwner);
+        emit StatusUpdated(_productId, _newStatus, msg.sender);
     }
 
     /**
@@ -168,15 +226,32 @@ contract Provenance is PharmaTraceAccessControl {
         bytes32 _productId,
         ProductStatus _newStatus
     ) public {
-        // --- FUNCTIONALITY TO BE IMPLEMENTED ---
-        // 1. Get the product from the `products` mapping
-        // 2. Check if it exists
-        // 3. Check if msg.sender is the currentOwner
-        // 4. Update product.status to _newStatus
-        // 5. Update product.lastUpdateTime
-        // 6. Add a HistoryEvent to `productHistory`
-        // 7. Emit a StatusUpdated event
-        revert("Provenance: Function not yet implemented.");
+        // Get the product
+        Product storage product = products[_productId];
+        
+        // Check if product exists
+        if (product.lastUpdateTime == 0) {
+            revert ProductDoesNotExist(_productId);
+        }
+        
+        // Check if msg.sender is the current owner
+        if (product.currentOwner != msg.sender) {
+            revert NotProductOwner(msg.sender, product.currentOwner);
+        }
+
+        // Update product status
+        product.status = _newStatus;
+        product.lastUpdateTime = block.timestamp;
+
+        // Add history event
+        productHistory[_productId].push(HistoryEvent({
+            actor: msg.sender,
+            newStatus: _newStatus,
+            timestamp: block.timestamp
+        }));
+
+        // Emit event
+        emit StatusUpdated(_productId, _newStatus, msg.sender);
     }
 
     // --- View Functions (Signatures) ---
@@ -189,9 +264,14 @@ contract Provenance is PharmaTraceAccessControl {
     function getProductDetails(
         bytes32 _productId
     ) public view returns (Product memory) {
-        // --- FUNCTIONALITY TO BE IMPLEMENTED ---
-        // 1. Return products[_productId]
-        revert("Provenance: Function not yet implemented.");
+        Product memory product = products[_productId];
+        
+        // Check if product exists
+        if (product.lastUpdateTime == 0) {
+            revert ProductDoesNotExist(_productId);
+        }
+        
+        return product;
     }
 
     /**
@@ -202,9 +282,12 @@ contract Provenance is PharmaTraceAccessControl {
     function getProductHistory(
         bytes32 _productId
     ) public view returns (HistoryEvent[] memory) {
-        // --- FUNCTIONALITY TO BE IMPLEMENTED ---
-        // 1. Return productHistory[_productId]
-        revert("Provenance: Function not yet implemented.");
+        // Check if product exists
+        if (products[_productId].lastUpdateTime == 0) {
+            revert ProductDoesNotExist(_productId);
+        }
+        
+        return productHistory[_productId];
     }
 
     /**
@@ -216,8 +299,13 @@ contract Provenance is PharmaTraceAccessControl {
     function regulatorCheckProduct(
         bytes32 _productId
     ) public view onlyRole(REGULATOR_ROLE) returns (Product memory) {
-        // --- FUNCTIONALITY TO BE IMPLEMENTED ---
-        // 1. Return products[_productId]
-        revert("Provenance: Function not yet implemented.");
+        Product memory product = products[_productId];
+        
+        // Check if product exists
+        if (product.lastUpdateTime == 0) {
+            revert ProductDoesNotExist(_productId);
+        }
+        
+        return product;
     }
 }

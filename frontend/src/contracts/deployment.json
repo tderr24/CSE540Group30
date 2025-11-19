@@ -1,0 +1,19 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "contractAddress": "0x6Db6696E1084ad665607649fA345c99339410aA9",
+  "accounts": {
+    "admin": "0x5fCBfd4Eb96FE7C12cF74e9A0750c6c7e8711BC5",
+    "producer": "0x31596ae4523b650bb60cf05d9c34c137315cd2ac",
+    "supplier": "0x3C44CdDdB6a900fa2b585dd299e03d12fa4293BC",
+    "retailer": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+    "consumer": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+    "regulator": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc"
+  },
+  "sampleProducts": {
+    "product1": "0x8a4c9c443bb0645df646a2d5bb55def0ed1d19645f7c926c3c2e7c9f7c4c1c5a",
+    "product2": "0x9b5d9d554cc0756ef757b3e6cc66eef0fe2e20756f8d037d3d3f8d0f8d5d2d6b"
+  },
+  "deploymentTime": "2025-01-24T00:00:00.000Z",
+  "note": "This is a placeholder. Deploy contracts with 'npm run deploy:local' to get real addresses."
+}

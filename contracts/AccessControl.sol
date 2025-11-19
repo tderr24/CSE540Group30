@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  * @title PharmaTraceAccessControl
  * @author PharmaTrace Team (CSE540)
  * @notice This contract manages Role-Based Access Control (RBAC) for the PharmaTrace system.
- * It defines the roles for Producer, Supplier, Retailer, and Regulator.
- * It is intended to be inherited by the main Provenance.sol contract.
+ * It defines the roles for Producer, Supplier, Retailer, Consumer, and Regulator.
+ * This contract is intended to be inherited by the main Provenance.sol contract.
  */
 contract PharmaTraceAccessControl is AccessControl {
 
@@ -17,6 +17,7 @@ contract PharmaTraceAccessControl is AccessControl {
     bytes32 public constant PRODUCER_ROLE = keccak256("PRODUCER_ROLE");
     bytes32 public constant SUPPLIER_ROLE = keccak256("SUPPLIER_ROLE");
     bytes32 public constant RETAILER_ROLE = keccak256("RETAILER_ROLE");
+    bytes32 public constant CONSUMER_ROLE = keccak256("CONSUMER_ROLE");
     bytes32 public constant REGULATOR_ROLE = keccak256("REGULATOR_ROLE");
     // The DEFAULT_ADMIN_ROLE (from AccessControl) will be the contract deployer
     // and will be responsible for granting these roles.
@@ -26,7 +27,7 @@ contract PharmaTraceAccessControl is AccessControl {
     /**
      * @dev Sets up the contract deployer as the DEFAULT_ADMIN_ROLE.
      * This admin is responsible for granting the PRODUCER, SUPPLIER,
-     * RETAILER, and REGULATOR roles to other stakeholder addresses.
+     * RETAILER, CONSUMER, and REGULATOR roles to other stakeholder addresses.
      */
     constructor() {
         // _grantRole(role, address)
@@ -61,6 +62,15 @@ contract PharmaTraceAccessControl is AccessControl {
      */
     function grantRetailerRole(address _account) public onlyRole(DEFAULT_ADMIN_ROLE) {
         grantRole(RETAILER_ROLE, _account);
+    }
+
+    /**
+     * @notice Grants the CONSUMER_ROLE to a given address.
+     * @dev Can only be called by an admin.
+     * @param _account The address to grant the role to.
+     */
+    function grantConsumerRole(address _account) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        grantRole(CONSUMER_ROLE, _account);
     }
 
     /**
