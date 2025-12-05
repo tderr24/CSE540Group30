@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ethers } from 'ethers';
 import { formatAddress, formatProductId, getStatusColor, getStatusName } from '../utils/web3';
+import { useAccountProducts } from '../hooks/useProducts';
 
 const ROLE_OPTIONS = [
   { key: 'PRODUCER', label: '🏭 Producer', grantMethod: 'grantProducerRole', getter: 'PRODUCER_ROLE' },
@@ -52,6 +53,13 @@ const RegulatorDashboard = ({ contract, account, isAdmin }) => {
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
+
+  const {
+    products: regulatorProducts,
+    loading: regulatorProductsLoading,
+    error: regulatorProductsError,
+    refresh: refreshRegulatorProducts
+  } = useAccountProducts(contract, account, { includeAll: false });
 
   const selectedConfig = useMemo(() => ROLE_OPTIONS.find((role) => role.key === selectedRole), [selectedRole]);
   const revokeConfig = useMemo(() => ROLE_OPTIONS.find((role) => role.key === revokeRole), [revokeRole]);
@@ -202,6 +210,14 @@ const RegulatorDashboard = ({ contract, account, isAdmin }) => {
       handleSelectProduct(products[0].productId);
     }
   }, [products, selectedProductId, isAdmin, handleSelectProduct]);
+
+  useEffect(() => {
+    if (isAdmin || !regulatorProducts.length) return;
+    const ownsSelection = regulatorProducts.some((product) => product.productId === selectedProductId);
+    if (!selectedProductId || !ownsSelection) {
+      handleSelectProduct(regulatorProducts[0].productId);
+    }
+  }, [isAdmin, regulatorProducts, selectedProductId, handleSelectProduct]);
 
   const handleGrantRole = async (event) => {
     event.preventDefault();
@@ -377,6 +393,179 @@ const RegulatorDashboard = ({ contract, account, isAdmin }) => {
                   <div style={{ wordBreak: 'break-all', color: '#6b7280' }}>{roleHashes[role.key] || '—'}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isAdmin && (
+        <div className="dashboard-section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+            <div>
+              <h3>🗂️ My Seized Products</h3>
+              <p style={{ color: '#6b7280' }}>
+                View every product currently assigned to this regulator account and review its full audit trail.
+              </p>
+            </div>
+            <button
+              className="btn btn-secondary"
+              onClick={refreshRegulatorProducts}
+              disabled={regulatorProductsLoading}
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              {regulatorProductsLoading ? 'Refreshing...' : 'Refresh List'}
+            </button>
+          </div>
+
+          {regulatorProductsError && (
+            <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: '6px', background: '#fee2e2', color: '#991b1b' }}>
+              {regulatorProductsError}
+            </div>
+          )}
+
+          <div style={{ marginTop: '1.5rem', display: 'grid', gridTemplateColumns: 'minmax(260px, 1fr) 2fr', gap: '1.5rem' }}>
+            <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', maxHeight: '480px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #e5e7eb', fontWeight: 600 }}>Products ({regulatorProducts.length})</div>
+              <div style={{ flex: 1, overflowY: 'auto' }}>
+                {regulatorProductsLoading && regulatorProducts.length === 0 && (
+                  <div style={{ padding: '1rem', color: '#6b7280' }}>Loading products...</div>
+                )}
+
+                {!regulatorProductsLoading && regulatorProducts.length === 0 && (
+                  <div className="empty-state" style={{ padding: '1.5rem' }}>
+                    <h4>No products assigned</h4>
+                    <p>Once you seize or are assigned a product, it will appear here automatically.</p>
+                  </div>
+                )}
+
+                {regulatorProducts.map((product) => {
+                  const isSelected = selectedProductId === product.productId;
+                  return (
+                    <button
+                      key={product.productId}
+                      onClick={() => handleSelectProduct(product.productId)}
+                      style={{
+                        width: '100%',
+                        border: 'none',
+                        borderBottom: '1px solid #e5e7eb',
+                        background: isSelected ? '#eef2ff' : '#ffffff',
+                        textAlign: 'left',
+                        padding: '1rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{product.name || 'Unnamed Product'}</div>
+                          <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{formatProductId(product.productId)}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                            Owner: {formatAddress(product.currentOwner)}
+                          </div>
+                        </div>
+                        <span
+                          style={{
+                            height: 'fit-content',
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '999px',
+                            fontSize: '0.75rem',
+                            color: '#fff',
+                            background: getStatusColor(product.status)
+                          }}
+                        >
+                          {getStatusName(product.status)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                        Updated {new Date(product.lastUpdateTime * 1000).toLocaleString()}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', minHeight: '320px' }}>
+              {!selectedProductDetails && (
+                <div style={{ color: '#6b7280' }}>
+                  Select a product to view its on-chain metadata and history timeline.
+                </div>
+              )}
+
+              {selectedProductDetails && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                    <div>
+                      <h4 style={{ marginBottom: '0.25rem' }}>{selectedProductDetails.name}</h4>
+                      <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#6b7280' }}>{selectedProductDetails.productId}</div>
+                    </div>
+                    <span
+                      className="status-badge"
+                      style={{ backgroundColor: getStatusColor(selectedProductDetails.status) }}
+                    >
+                      {getStatusName(selectedProductDetails.status)}
+                    </span>
+                  </div>
+
+                  <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Current Owner</div>
+                      <div style={{ fontWeight: 600 }}>{formatAddress(selectedProductDetails.currentOwner)}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Last Updated</div>
+                      <div style={{ fontWeight: 600 }}>{new Date(selectedProductDetails.lastUpdateTime * 1000).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>IPFS Hash</div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all' }}>
+                        {selectedProductDetails.metadataHash || 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '1.5rem' }}>
+                    <h4 style={{ marginBottom: '0.5rem' }}>📜 History Timeline</h4>
+                    {historyError && (
+                      <div style={{ padding: '0.75rem', borderRadius: '6px', background: '#fee2e2', color: '#991b1b', marginBottom: '0.75rem' }}>
+                        {historyError}
+                      </div>
+                    )}
+                    {historyLoading && (
+                      <div style={{ color: '#6b7280' }}>Loading history...</div>
+                    )}
+                    {!historyLoading && history.length === 0 && !historyError && (
+                      <div style={{ color: '#6b7280' }}>No history events recorded.</div>
+                    )}
+                    {!historyLoading && history.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {history.map((event, index) => (
+                          <div
+                            key={`${event.actor}-${event.timestamp}-${index}`}
+                            style={{
+                              padding: '0.75rem 1rem',
+                              background: '#f9fafb',
+                              borderLeft: `4px solid ${getStatusColor(event.status)}`,
+                              borderRadius: '4px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <strong style={{ color: getStatusColor(event.status) }}>{getStatusName(event.status)}</strong>
+                                <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                                  By: {formatAddress(event.actor)}
+                                </div>
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                                {new Date(event.timestamp * 1000).toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
