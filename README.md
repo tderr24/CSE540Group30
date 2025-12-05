@@ -1,177 +1,193 @@
-# PharmaTrace  
-### Blockchain-Based Pharmaceutical Supply Chain System  
-**Course:** CSE540: Enterprise Blockchain Applications  
-**Team:** Group 30 - PharmaTrace  
+# PharmaTrace
+### Blockchain-Based Pharmaceutical Supply Chain System
+**Course:** CSE540 – Enterprise Blockchain Applications  
+**Team:** Group 30 – PharmaTrace
 
 ---
 
-## Project Description
+## 1. Project Overview
 
-PharmaTrace is a blockchain-based supply chain system designed to combat counterfeit drugs and ensure product integrity in the pharmaceutical industry.  
-By leveraging Ethereum smart contracts, IPFS for off-chain storage, and a React.js front-end, PharmaTrace provides a transparent, auditable, and decentralized record of a drug's journey - from manufacturer to pharmacy.
+PharmaTrace is a production-ready prototype that tracks pharmaceutical batches from creation through delivery using Ethereum smart contracts, IPFS metadata, and a MetaMask-enabled React frontend. Every stakeholder—Producer, Supplier, Retailer, Consumer, Regulator, and Admin—receives a tailored dashboard that mirrors their real-world responsibilities (registering products, transferring custody, auditing history, etc.).
 
+Goals:
 
----
-
-### Objectives
-- **Enhance Patient Safety:** Prevent counterfeit or unauthorized drugs from entering the supply chain.  
-- **Ensure Product Integrity:** Enable verifiable tracking of temperature-sensitive shipments (e.g., vaccines).  
-- **Increase Transparency:** Provide stakeholders with appropriate visibility into product provenance.  
-- **Build Trust:** Create an immutable, auditable record accessible to regulators and consumers alike.
+- **Patient safety** – stop counterfeit drugs from entering the supply chain.
+- **Cold-chain assurance** – anchor temperature or certificate artifacts via IPFS.
+- **End-to-end transparency** – give regulators and consumers a verifiable audit trail.
+- **Automation** – use smart contracts to enforce role permissions and immutable history.
 
 ---
 
-## System Architecture
+## 2. Repository Structure
 
-PharmaTrace uses a hybrid on-chain/off-chain architecture for scalability and cost efficiency.
+```
+.
+├── contracts/               # Solidity sources (AccessControl, Provenance)
+├── scripts/                 # Hardhat deployment/verification helpers
+├── test/                    # Hardhat tests
+├── frontend/                # React UI (see frontend/README.md for details)
+├── deliverables.md          # 10-page written summary (architecture, results, etc.)
+├── hardhat.config.js        # Hardhat configuration
+├── package.json             # Root-level scripts (deploy, verify, lint)
+└── README.md                # This document
+```
 
-### Layer 1 - On-Chain (Ethereum / Solidity)
-- **Contracts:**  
-  - `AccessControl.sol`: Role-Based Access Control (RBAC) managing roles - Producer, Supplier, Retailer, Consumer, Regulator.  
-  - `Provenance.sol`: Core lifecycle contract for registering, transferring, and updating product status.
-- **Key Functions:**  
-  - `registerProduct()` - Register new pharmaceutical products
-  - `transferProduct()` - Transfer custody between stakeholders
-  - `updateProductStatus()` - Update product status without ownership change
-  - `getProductDetails()` - Retrieve product information
-  - `getProductHistory()` - Get complete audit trail
-  - `regulatorCheckProduct()` - Regulator-only product verification
-- **Events:**  
-  - `ProductRegistered` - Emitted when product is registered
-  - `OwnershipTransferred` - Emitted when custody changes
-  - `StatusUpdated` - Emitted when product status changes
+Key scripts (`package.json`):
 
-### Layer 2 - Off-Chain (IPFS)
-- Stores product metadata (certifications, temperature logs, batch data).  
-- IPFS content identifiers (CIDs) are hashed and stored on-chain for reference.
-
-### Layer 3 - Front-End (React.js + Ethers.js)
-- Web interface with:
-  - Stakeholder dashboards (Producer, Supplier, Retailer, Regulator)
-  - Public verification portal (search by Product ID)
-- Wallet connection via MetaMask.
+| Script | Purpose |
+| --- | --- |
+| `npm run node` | Launch Hardhat local blockchain (31337) |
+| `npm run deploy:local` | Deploy contracts locally + seed demo roles/products + write `frontend/src/contracts/deployment.json` |
+| `npm run deploy:sepolia` | Deploy AccessControl + Provenance to Sepolia using `.env` credentials |
+| `npm run verify:sepolia` | Etherscan verification helper |
+| `npm run frontend` | Convenience wrapper (`cd frontend && npm start`) |
 
 ---
 
-## Dependencies & Setup Instructions
+## 3. System Architecture
 
-### **Backend (Smart Contracts)**
-- **Language:**: Solidity  
-- **Framework:**: Hardhat  
-- **Blockchain:**: Ethereum (Sepolia Testnet)
+### On-Chain (Layer 1)
 
-#### Prerequisites:
-- Node.js (>= 18)
-- npm or yarn
-- MetaMask wallet
-- Access to [Infura](https://infura.io/) or [Alchemy](https://www.alchemy.com/) for RPC connection
+- `AccessControl.sol` – Extends OpenZeppelin AccessControl, defines PRODUCER/SUPPLIER/RETAILER/CONSUMER/REGULATOR + DEFAULT_ADMIN roles, plus helper grant/revoke functions.
+- `Provenance.sol` – Product lifecycle contract. Core functions:
+  - `registerProduct(bytes32 id, string name, string metadataHash)`
+  - `transferProduct(bytes32 id, address newOwner, ProductStatus newStatus)`
+  - `updateProductStatus(bytes32 id, ProductStatus status)`
+  - `getProductDetails`, `getProductHistory`, `regulatorCheckProduct`
+- Events (`ProductRegistered`, `OwnershipTransferred`, `StatusUpdated`) give the UI a reliable event log for reconstruction.
 
-## Local Setup
+### Off-Chain (Layer 2)
 
-### 1. Clone the Repository
+- IPFS (or any content-addressed store) holds certificates, temperature logs, etc. Only the hash is stored on-chain.
+
+### Frontend (Layer 3)
+
+- React (Create React App) + ethers.js.
+- Reads ABI + deployment info from `frontend/src/contracts/`.
+- `useAccountProducts` hook fetches every registered product and filters by current wallet.
+- Dashboards per role handle registrations, transfers, and audits with contextual UI.
+
+---
+
+## 4. Prerequisites
+
+| Dependency | Version | Notes |
+| --- | --- | --- |
+| Node.js | ≥ 18.x | Required for Hardhat + CRA |
+| npm | ≥ 9.x | Yarn/pnpm work but npm scripts are provided |
+| MetaMask | Latest | Install browser extension |
+| Hardhat | Bundled locally | No global install required |
+| RPC provider | Alchemy / Infura | Needed for Sepolia deployments |
+
+---
+
+## 5. Local Development (Hardhat Network)
 
 ```bash
 git clone https://github.com/tderr24/CSE540Group30.git
 cd CSE540Group30
-```
 
----
-
-### 2. Install Dependencies
-
-Install all required Node.js dependencies:
-
-```bash
+# install root dependencies (Hardhat + scripts)
 npm install
+
+# start local blockchain (Terminal 1)
+npm run node
+
+# deploy contracts + seed demo data + write frontend deployment.json (Terminal 2)
+npm run deploy:local
+
+# launch frontend (Terminal 3)
+cd frontend
+npm install   # first run only
+npm start
 ```
+
+The deploy script funds six demo accounts (Producer→Admin) and registers sample batches so every dashboard has data immediately. Import the printed private keys into MetaMask (see `frontend/TESTING_GUIDE.md` for the table).
 
 ---
 
-### 3. Install Hardhat
+## 6. Testnet Deployment (Sepolia)
 
-If Hardhat is not installed globally, install it as a development dependency:
+1. Create `.env` in repo root:
+
+```env
+SEPOLIA_RPC_URL="https://eth-sepolia.g.alchemy.com/v2/<key>"
+PRIVATE_KEY="0xyourwallet"
+ADMIN_ADDRESS="0xadminWallet"        # optional: auto-transfer DEFAULT_ADMIN_ROLE
+REVOKE_DEPLOYER_ADMIN="true"          # optional: remove deployer after handoff
+```
+
+2. Deploy + verify:
 
 ```bash
-npm install --save-dev hardhat
+npm run deploy:sepolia
+npm run verify:sepolia
 ```
 
----
-
-### 4. Install OpenZeppelin Contracts
-
-This repository uses OpenZeppelin Contracts for secure, standard implementations of roles and access control:
-
-```bash
-npm install @openzeppelin/contracts
-```
+3. Copy the generated `frontend/src/contracts/deployment.json` into your front-end build artifact (or redeploy the frontend). The React app will automatically prompt MetaMask to switch to chain 11155111 and then connect.
 
 ---
 
-## How to Use or Deploy (In Progress)
+## 7. Frontend Usage Highlights
 
-> These instructions are a draft and will be refined as the project progresses.
+- **WalletConnect header** – connect/disconnect, display role badge, switch accounts without leaving the page.
+- **Producer dashboard** – register product form (auto generates batch IDs using keccak256). After submission, success toast displays the ID for future transfers.
+- **Supplier/Retailer dashboards** – list owned batches via `useAccountProducts`, allow status transitions (e.g., Shipped → InTransit → Received → InStock → Sold).
+- **Consumer dashboard** – view purchased products and verify authenticity with the Product Verification portal.
+- **Regulator dashboard** –
+  - Non-admin regulators: see owned products plus full audit history.
+  - Admin regulators: unlock role management UI + global product explorer.
+- **Product Verification portal** – any role (or even disconnected user) can paste a Product ID to view metadata/history.
+
+For detailed user flows, see `frontend/TESTING_GUIDE.md`.
 
 ---
 
-### Compiling the Contracts
+## 8. Testing & Validation
 
-To compile the smart contracts:
-
-```bash
-npx hardhat compile
-```
-
----
-
-### Running Tests
-
-> Unit tests are currently under development.
-
-Run the test suite (once available):
+- **Smart contracts** – add Hardhat tests under `test/`. Run with:
 
 ```bash
 npx hardhat test
 ```
 
----
-
-### Deploying the Contract
-
-1. Create a `.env` file in the root directory.  
-2. Add your private key and network RPC URL (from [Alchemy](https://www.alchemy.com/) or [Infura](https://infura.io/)):
-
-   ```env
-   SEPOLIA_RPC_URL="https://eth-sepolia.g.alchemy.com/v2/your-api-key"
-   PRIVATE_KEY="0xYourPrivateKey"
-   ```
-
-3. Run the deployment script on the Sepolia Testnet:
-
-   ```bash
-   npx hardhat run scripts/deploy.js --network sepolia
-   ```
-
----
-
-## Running the Front-End (Future Implementation)
-
-> The React front-end is not yet implemented.
-
-When available, the expected commands will be:
+- **Frontend** – Create React App defaults:
 
 ```bash
-# cd frontend
-# npm start
+cd frontend
+npm test
+npm run build    # ensures production bundle compiles
 ```
 
----
-
-## License
-
-This project is part of the CSE540 Group 30 coursework and is intended for educational use.
+- **Manual QA** – Use the scripted accounts (Producer, Supplier, Retailer, Consumer, Regulator, Admin) to walk a product through the entire lifecycle. All steps are documented in `frontend/TESTING_GUIDE.md`.
 
 ---
 
-### Notes
-- Ensure you have Node.js and npm installed.
-- You’ll need testnet ETH (from a Sepolia faucet) to deploy to Sepolia.
+## 9. Troubleshooting
+
+| Issue | Fix |
+| --- | --- |
+| MetaMask opens in full tab | Browser behavior; pin the extension or toggle "Expand view" off. Not controllable by dApp. |
+| "Contract not deployed" toast | Run `npm run deploy:local` (or copy fresh `deployment.json` after Sepolia deploy). |
+| Wrong network error | Click the in-app button to trigger `wallet_switchEthereumChain`. Ensure `chainId` in `deployment.json` matches the network you're on. |
+| Regulator dashboard empty | Only admins see the global explorer. Non-admin regulators must own at least one product (transfer from Producer/Supplier) to populate the list. |
+| Etherscan verify fails | Wait for contract bytecode to propagate, confirm Hardhat compiler version matches `hardhat.config.js`, rerun `npm run verify:sepolia`. |
+
+---
+
+## 10. Deliverables & Documentation
+
+- `deliverables.md` – 10-page paper-style writeup: abstract, literature review, architecture, results, future work, team contributions, references.
+- `frontend/README.md` – deep dive into the React app (architecture diagram, setup, troubleshooting).
+- `frontend/TESTING_GUIDE.md` – step-by-step walkthrough for every stakeholder role on both localhost and Sepolia.
+
+---
+
+## 11. License / Academic Use
+
+This repository is part of the ASU CSE540 Group 30 coursework. It is intended for educational use; do not deploy to production without additional security audits and compliance reviews.
+
+---
+
+Questions or feedback? Open an issue or reach out to the team.  
+PharmaTrace © 2025 – Group 30
